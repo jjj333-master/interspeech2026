@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SB-CFM: Scene-conditioned Foley Sound Synthesis via Schrödinger Bridge Conditional Flow Matching</title>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600;8..60,700&family=Source+Sans+3:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-bg: #fafaf8;
+            --color-surface: #ffffff;
+            --color-text: #1a1a1a;
+            --color-text-secondary: #555;
+            --color-accent: #2c5f8a;
+            --color-accent-light: #e8f0f7;
+            --color-border: #e0ddd8;
+            --color-best: #1a6b3c;
+            --color-best-bg: #e8f5ed;
+            --max-width: 900px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Source Sans 3', sans-serif;
+            background: var(--color-bg);
+            color: var(--color-text);
+            line-height: 1.7;
+            font-size: 16px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── Header ── */
+        .header {
+            background: linear-gradient(180deg, #f0f0ec 0%, var(--color-bg) 100%);
+            border-bottom: 1px solid var(--color-border);
+            padding: 60px 20px 50px;
+            text-align: center;
+        }
+
+        .header .conference-badge {
+            display: inline-block;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--color-accent);
+            background: var(--color-accent-light);
+            padding: 5px 16px;
+            border-radius: 4px;
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            font-family: 'Source Serif 4', serif;
+            font-size: 2.2em;
+            font-weight: 700;
+            line-height: 1.25;
+            max-width: 800px;
+            margin: 0 auto 20px;
+            color: var(--color-text);
+        }
+
+        .authors {
+            font-size: 1.05em;
+            color: var(--color-text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .authors a {
+            color: var(--color-accent);
+            text-decoration: none;
+        }
+
+        .authors a:hover {
+            text-decoration: underline;
+        }
+
+        .affiliation {
+            font-size: 0.92em;
+            color: #888;
+            margin-bottom: 24px;
+        }
+
+        .links {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .links a {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'Source Sans 3', sans-serif;
+            font-size: 0.9em;
+            font-weight: 500;
+            color: var(--color-text);
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            padding: 8px 18px;
+            border-radius: 6px;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .links a:hover {
+            border-color: var(--color-accent);
+            color: var(--color-accent);
+            box-shadow: 0 2px 8px rgba(44, 95, 138, 0.1);
+        }
+
+        .links a svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* ── Main ── */
+        .container {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        section {
+            margin: 50px auto;
+            max-width: var(--max-width);
+            padding: 0 20px;
+        }
+
+        h2 {
+            font-family: 'Source Serif 4', serif;
+            font-size: 1.6em;
+            font-weight: 600;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--color-text);
+        }
+
+        h3 {
+            font-family: 'Source Serif 4', serif;
+            font-size: 1.2em;
+            font-weight: 600;
+            margin: 30px 0 14px;
+            color: var(--color-text);
+        }
+
+        p {
+            margin-bottom: 16px;
+            color: var(--color-text-secondary);
+        }
+
+        /* ── Abstract ── */
+        .abstract-box {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-left: 4px solid var(--color-accent);
+            padding: 24px 28px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .abstract-box p {
+            margin-bottom: 0;
+            font-size: 0.98em;
+            line-height: 1.8;
+        }
+
+        /* ── Architecture ── */
+        .architecture-img {
+            display: block;
+            max-width: 100%;
+            margin: 20px auto;
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            background: white;
+            padding: 20px;
+        }
+
+        .img-caption {
+            text-align: center;
+            font-size: 0.88em;
+            color: #888;
+            margin-top: 10px;
+        }
+
+        /* ── Results Table ── */
+        .results-table-wrapper {
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+
+        table.results {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.92em;
+            background: var(--color-surface);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--color-border);
+        }
+
+        table.results thead {
+            background: #f5f5f2;
+        }
+
+        table.results th {
+            font-family: 'Source Sans 3', sans-serif;
+            font-weight: 600;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 12px 16px;
+            text-align: center;
+            border-bottom: 2px solid var(--color-border);
+            color: var(--color-text);
+        }
+
+        table.results td {
+            padding: 10px 16px;
+            text-align: center;
+            border-bottom: 1px solid #f0f0ec;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+        }
+
+        table.results td:first-child {
+            font-family: 'Source Sans 3', sans-serif;
+            text-align: left;
+            font-weight: 500;
+        }
+
+        table.results tr:last-child td {
+            border-bottom: none;
+        }
+
+        table.results tr.ours {
+            background: var(--color-best-bg);
+        }
+
+        table.results tr.ours td {
+            font-weight: 600;
+            color: var(--color-best);
+        }
+
+        table.results tr.ours td:first-child {
+            font-weight: 700;
+        }
+
+        .metric-arrow {
+            font-size: 0.75em;
+            opacity: 0.6;
+        }
+
+        /* ── Audio Samples ── */
+        .audio-grid {
+            display: grid;
+            gap: 0;
+            margin: 24px 0;
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            overflow: hidden;
+            background: var(--color-surface);
+        }
+
+        .audio-grid-header {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            background: #f5f5f2;
+            border-bottom: 2px solid var(--color-border);
+        }
+
+        .audio-grid-header .col-label {
+            font-weight: 600;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 12px 16px;
+            text-align: center;
+            color: var(--color-text);
+        }
+
+        .audio-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            border-bottom: 1px solid #f0f0ec;
+        }
+
+        .audio-row:last-child {
+            border-bottom: none;
+        }
+
+        .audio-cell {
+            padding: 14px 12px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            border-right: 1px solid #f0f0ec;
+        }
+
+        .audio-cell:last-child {
+            border-right: none;
+        }
+
+        .audio-cell.ours-cell {
+            background: var(--color-best-bg);
+        }
+
+        .scene-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78em;
+            font-weight: 500;
+            color: var(--color-text-secondary);
+            letter-spacing: 0.3px;
+        }
+
+        audio {
+            width: 100%;
+            max-width: 200px;
+            height: 36px;
+        }
+
+        audio::-webkit-media-controls-panel {
+            background: transparent;
+        }
+
+        /* ── Scene Section Headers ── */
+        .scene-section {
+            margin: 36px 0 16px;
+            padding: 10px 18px;
+            background: var(--color-accent-light);
+            border-radius: 6px;
+            display: inline-block;
+        }
+
+        .scene-section span {
+            font-family: 'Source Sans 3', sans-serif;
+            font-weight: 600;
+            font-size: 1em;
+            color: var(--color-accent);
+        }
+
+        /* ── Responsive Audio for each scene ── */
+        .scene-audio-block {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .scene-audio-block h4 {
+            font-family: 'Source Sans 3', sans-serif;
+            font-weight: 600;
+            font-size: 0.95em;
+            color: var(--color-accent);
+            margin-bottom: 14px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .sample-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
+        .sample-item {
+            text-align: center;
+        }
+
+        .sample-item .model-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78em;
+            font-weight: 500;
+            color: var(--color-text-secondary);
+            margin-bottom: 6px;
+            letter-spacing: 0.3px;
+        }
+
+        .sample-item.best .model-name {
+            color: var(--color-best);
+            font-weight: 600;
+        }
+
+        .sample-item audio {
+            width: 100%;
+            max-width: 220px;
+            height: 38px;
+        }
+
+        .sample-divider {
+            font-size: 0.82em;
+            color: #aaa;
+            margin: 6px 0 10px;
+            padding-left: 4px;
+        }
+
+        /* ── Citation ── */
+        .citation-box {
+            background: #f8f8f5;
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            padding: 20px;
+            position: relative;
+        }
+
+        .citation-box pre {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82em;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: var(--color-text-secondary);
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            padding: 4px 10px;
+            font-size: 0.78em;
+            font-family: 'Source Sans 3', sans-serif;
+            cursor: pointer;
+            color: var(--color-text-secondary);
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            border-color: var(--color-accent);
+            color: var(--color-accent);
+        }
+
+        /* ── Footer ── */
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            border-top: 1px solid var(--color-border);
+            margin-top: 60px;
+            font-size: 0.85em;
+            color: #aaa;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 700px) {
+            .header h1 {
+                font-size: 1.5em;
+            }
+
+            .sample-row {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .audio-grid-header,
+            .audio-row {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ════════════ Header ════════════ -->
+<header class="header">
+    <div class="conference-badge">Interspeech 2025</div>
+    <h1>Scene-conditioned Foley Sound Synthesis via Schrödinger Bridge Conditional Flow Matching</h1>
+    <p class="authors">
+        <!-- 저자 이름은 accept 후에 추가 -->
+        Anonymous Authors
+    </p>
+    <p class="affiliation">Under Review</p>
+    <div class="links">
+        <a href="#">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Paper (PDF)
+        </a>
+        <a href="https://github.com/jjj333-master/interspeech2026">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+            Code
+        </a>
+    </div>
+</header>
+
+<!-- ════════════ Abstract ════════════ -->
+<section>
+    <h2>Abstract</h2>
+    <div class="abstract-box">
+        <p>
+            This paper proposes a scene-conditioned Foley sound synthesis method based on Schrödinger Bridge Conditional Flow Matching (SB-CFM). The proposed approach leverages entropic optimal transport coupling and Schrödinger bridge regularization to learn a robust velocity field for mapping noise to realistic Foley sounds under scene-category conditions. To address the inherently multi-modal nature of Foley synthesis, we adopt SDE-based sampling combined with classifier-free guidance. Experiments on the DCASE 2023 Task 7 dataset show that SB-CFM outperforms existing diffusion-based baselines across all evaluation metrics.
+        </p>
+    </div>
+</section>
+
+<!-- ════════════ Architecture ════════════ -->
+<section>
+    <h2>Model Architecture</h2>
+    <p>
+        Overview of the proposed SB-CFM framework for scene-conditioned Foley sound synthesis.
+        The model learns a velocity field that transports Gaussian noise to mel-spectrogram representations,
+        conditioned on scene category embeddings. HiFi-GAN is used as the vocoder to convert generated mel-spectrograms to waveforms.
+    </p>
+    <!-- 아키텍처 그림은 images/ 폴더에 넣으세요 -->
+    <img class="architecture-img" src="images/architecture.png" alt="SB-CFM Architecture">
+    <p class="img-caption">Figure 1. Overall architecture of the proposed SB-CFM model.</p>
+</section>
+
+<!-- ════════════ Results ════════════ -->
+<section>
+    <h2>Evaluation Results</h2>
+    <p>
+        We compare SB-CFM with three baselines on the DCASE 2023 Task 7 dataset: the official DCASE Baseline, T-Foley, and MambaFoley. All metrics are averaged across seven sound scene categories.
+    </p>
+
+    <h3>Overall Performance</h3>
+    <div class="results-table-wrapper">
+        <table class="results">
+            <thead>
+                <tr>
+                    <th>Model</th>
+                    <th>Params</th>
+                    <th>FAD <span class="metric-arrow">↓</span></th>
+                    <th>Acc <span class="metric-arrow">↑</span></th>
+                    <th>KL <span class="metric-arrow">↓</span></th>
+                    <th>IS <span class="metric-arrow">↑</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>DCASE Baseline</td>
+                    <td>112M</td>
+                    <td>10.06</td>
+                    <td>0.64</td>
+                    <td>0.26</td>
+                    <td>3.68</td>
+                </tr>
+                <tr>
+                    <td>T-Foley</td>
+                    <td>74M</td>
+                    <td>8.60</td>
+                    <td>0.77</td>
+                    <td>0.34</td>
+                    <td>3.97</td>
+                </tr>
+                <tr>
+                    <td>MambaFoley</td>
+                    <td>47M</td>
+                    <td>7.50</td>
+                    <td>0.89</td>
+                    <td>0.07</td>
+                    <td>4.16</td>
+                </tr>
+                <tr class="ours">
+                    <td>SB-CFM (Ours)</td>
+                    <td>45M</td>
+                    <td>6.02</td>
+                    <td>0.94</td>
+                    <td>0.05</td>
+                    <td>5.18</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>Per-scene FAD</h3>
+    <div class="results-table-wrapper">
+        <table class="results">
+            <thead>
+                <tr>
+                    <th>Scene</th>
+                    <th>Baseline</th>
+                    <th>T-Foley</th>
+                    <th>MambaFoley</th>
+                    <th>SB-CFM (Ours)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Dog bark</td>
+                    <td>10.92</td>
+                    <td>6.57</td>
+                    <td>7.21</td>
+                    <td style="color: var(--color-best); font-weight: 600;">3.62</td>
+                </tr>
+                <tr>
+                    <td>Footstep</td>
+                    <td>10.29</td>
+                    <td>15.04</td>
+                    <td>8.82</td>
+                    <td style="color: var(--color-best); font-weight: 600;">5.10</td>
+                </tr>
+                <tr>
+                    <td>Gunshot</td>
+                    <td>8.39</td>
+                    <td>5.50</td>
+                    <td style="color: var(--color-best); font-weight: 600;">5.24</td>
+                    <td>5.74</td>
+                </tr>
+                <tr>
+                    <td>Keyboard</td>
+                    <td>4.72</td>
+                    <td>6.01</td>
+                    <td>8.48</td>
+                    <td style="color: var(--color-best); font-weight: 600;">3.03</td>
+                </tr>
+                <tr>
+                    <td>Moving motor vehicle</td>
+                    <td>19.62</td>
+                    <td>19.34</td>
+                    <td>13.54</td>
+                    <td style="color: var(--color-best); font-weight: 600;">10.80</td>
+                </tr>
+                <tr>
+                    <td>Rain</td>
+                    <td>13.14</td>
+                    <td>11.76</td>
+                    <td style="color: var(--color-best); font-weight: 600;">5.20</td>
+                    <td>5.96</td>
+                </tr>
+                <tr>
+                    <td>Sneeze / cough</td>
+                    <td>3.41</td>
+                    <td>5.08</td>
+                    <td>4.00</td>
+                    <td style="color: var(--color-best); font-weight: 600;">2.90</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- ════════════ Audio Samples ════════════ -->
+<section>
+    <h2>Audio Samples</h2>
+    <p>
+        Below are generated audio samples for each of the seven scene categories. For each scene, we provide three randomly sampled outputs from each model. All samples are 4 seconds at 22.05 kHz.
+    </p>
+
+    <!-- ── Dog Bark ── -->
+    <div class="scene-audio-block">
+        <h4>🐕 Dog Bark</h4>
+        <div class="sample-divider">Sample 1</div>
+        <div class="sample-row">
+            <div class="sample-item">
+                <div class="model-name">Ground Truth</div>
+                <audio controls preload="none"><source src="audio/dog_bark/gt_1.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item best">
+                <div class="model-name">SB-CFM (Ours)</div>
+                <audio controls preload="none"><source src="audio/dog_bark/sbcfm_1.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">MambaFoley</div>
+                <audio controls preload="none"><source src="audio/dog_bark/mambafoley_1.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">T-Foley</div>
+                <audio controls preload="none"><source src="audio/dog_bark/tfoley_1.wav" type="audio/wav"></audio>
+            </div>
+        </div>
+        <div class="sample-divider">Sample 2</div>
+        <div class="sample-row">
+            <div class="sample-item">
+                <div class="model-name">Ground Truth</div>
+                <audio controls preload="none"><source src="audio/dog_bark/gt_2.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item best">
+                <div class="model-name">SB-CFM (Ours)</div>
+                <audio controls preload="none"><source src="audio/dog_bark/sbcfm_2.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">MambaFoley</div>
+                <audio controls preload="none"><source src="audio/dog_bark/mambafoley_2.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">T-Foley</div>
+                <audio controls preload="none"><source src="audio/dog_bark/tfoley_2.wav" type="audio/wav"></audio>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Footstep ── -->
+    <div class="scene-audio-block">
+        <h4>👟 Footstep</h4>
+        <div class="sample-divider">Sample 1</div>
+        <div class="sample-row">
+            <div class="sample-item">
+                <div class="model-name">Ground Truth</div>
+                <audio controls preload="none"><source src="audio/footstep/gt_1.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item best">
+                <div class="model-name">SB-CFM (Ours)</div>
+                <audio controls preload="none"><source src="audio/footstep/sbcfm_1.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">MambaFoley</div>
+                <audio controls preload="none"><source src="audio/footstep/mambafoley_1.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">T-Foley</div>
+                <audio controls preload="none"><source src="audio/footstep/tfoley_1.wav" type="audio/wav"></audio>
+            </div>
+        </div>
+        <div class="sample-divider">Sample 2</div>
+        <div class="sample-row">
+            <div class="sample-item">
+                <div class="model-name">Ground Truth</div>
+                <audio controls preload="none"><source src="audio/footstep/gt_2.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item best">
+                <div class="model-name">SB-CFM (Ours)</div>
+                <audio controls preload="none"><source src="audio/footstep/sbcfm_2.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">MambaFoley</div>
+                <audio controls preload="none"><source src="audio/footstep/mambafoley_2.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">T-Foley</div>
+                <audio controls preload="none"><source src="audio/footstep/tfoley_2.wav" type="audio/wav"></audio>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Gunshot ── -->
+    <div class="scene-audio-block">
+        <h4>💥 Gunshot</h4>
+        <div class="sample-divider">Sample 1</div>
+        <div class="sample-row">
+            <div class="sample-item">
+                <div class="model-name">Ground Truth</div>
+                <audio controls preload="none"><source src="audio/gunshot/gt_1.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item best">
+                <div class="model-name">SB-CFM (Ours)</div>
+                <audio controls preload="none"><source src="audio/gunshot/sbcfm_1.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">MambaFoley</div>
+                <audio controls preload="none"><source src="audio/gunshot/mambafoley_1.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">T-Foley</div>
+                <audio controls preload="none"><source src="audio/gunshot/tfoley_1.wav" type="audio/wav"></audio>
+            </div>
+        </div>
+        <div class="sample-divider">Sample 2</div>
+        <div class="sample-row">
+            <div class="sample-item">
+                <div class="model-name">Ground Truth</div>
+                <audio controls preload="none"><source src="audio/gunshot/gt_2.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item best">
+                <div class="model-name">SB-CFM (Ours)</div>
+                <audio controls preload="none"><source src="audio/gunshot/sbcfm_2.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">MambaFoley</div>
+                <audio controls preload="none"><source src="audio/gunshot/mambafoley_2.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">T-Foley</div>
+                <audio controls preload="none"><source src="audio/gunshot/tfoley_2.wav" type="audio/wav"></audio>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Keyboard ── -->
+    <div class="scene-audio-block">
+        <h4>⌨️ Keyboard</h4>
+        <div class="sample-divider">Sample 1</div>
+        <div class="sample-row">
+            <div class="sample-item">
+                <div class="model-name">Ground Truth</div>
+                <audio controls preload="none"><source src="audio/keyboard/gt_1.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item best">
+                <div class="model-name">SB-CFM (Ours)</div>
+                <audio controls preload="none"><source src="audio/keyboard/sbcfm_1.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">MambaFoley</div>
+                <audio controls preload="none"><source src="audio/keyboard/mambafoley_1.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">T-Foley</div>
+                <audio controls preload="none"><source src="audio/keyboard/tfoley_1.wav" type="audio/wav"></audio>
+            </div>
+        </div>
+        <div class="sample-divider">Sample 2</div>
+        <div class="sample-row">
+            <div class="sample-item">
+                <div class="model-name">Ground Truth</div>
+                <audio controls preload="none"><source src="audio/keyboard/gt_2.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item best">
+                <div class="model-name">SB-CFM (Ours)</div>
+                <audio controls preload="none"><source src="audio/keyboard/sbcfm_2.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">MambaFoley</div>
+                <audio controls preload="none"><source src="audio/keyboard/mambafoley_2.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">T-Foley</div>
+                <audio controls preload="none"><source src="audio/keyboard/tfoley_2.wav" type="audio/wav"></audio>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Moving Motor Vehicle ── -->
+    <div class="scene-audio-block">
+        <h4>🚗 Moving Motor Vehicle</h4>
+        <div class="sample-divider">Sample 1</div>
+        <div class="sample-row">
+            <div class="sample-item">
+                <div class="model-name">Ground Truth</div>
+                <audio controls preload="none"><source src="audio/motor_vehicle/gt_1.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item best">
+                <div class="model-name">SB-CFM (Ours)</div>
+                <audio controls preload="none"><source src="audio/motor_vehicle/sbcfm_1.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">MambaFoley</div>
+                <audio controls preload="none"><source src="audio/motor_vehicle/mambafoley_1.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">T-Foley</div>
+                <audio controls preload="none"><source src="audio/motor_vehicle/tfoley_1.wav" type="audio/wav"></audio>
+            </div>
+        </div>
+        <div class="sample-divider">Sample 2</div>
+        <div class="sample-row">
+            <div class="sample-item">
+                <div class="model-name">Ground Truth</div>
+                <audio controls preload="none"><source src="audio/motor_vehicle/gt_2.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item best">
+                <div class="model-name">SB-CFM (Ours)</div>
+                <audio controls preload="none"><source src="audio/motor_vehicle/sbcfm_2.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">MambaFoley</div>
+                <audio controls preload="none"><source src="audio/motor_vehicle/mambafoley_2.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">T-Foley</div>
+                <audio controls preload="none"><source src="audio/motor_vehicle/tfoley_2.wav" type="audio/wav"></audio>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Rain ── -->
+    <div class="scene-audio-block">
+        <h4>🌧️ Rain</h4>
+        <div class="sample-divider">Sample 1</div>
+        <div class="sample-row">
+            <div class="sample-item">
+                <div class="model-name">Ground Truth</div>
+                <audio controls preload="none"><source src="audio/rain/gt_1.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item best">
+                <div class="model-name">SB-CFM (Ours)</div>
+                <audio controls preload="none"><source src="audio/rain/sbcfm_1.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">MambaFoley</div>
+                <audio controls preload="none"><source src="audio/rain/mambafoley_1.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">T-Foley</div>
+                <audio controls preload="none"><source src="audio/rain/tfoley_1.wav" type="audio/wav"></audio>
+            </div>
+        </div>
+        <div class="sample-divider">Sample 2</div>
+        <div class="sample-row">
+            <div class="sample-item">
+                <div class="model-name">Ground Truth</div>
+                <audio controls preload="none"><source src="audio/rain/gt_2.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item best">
+                <div class="model-name">SB-CFM (Ours)</div>
+                <audio controls preload="none"><source src="audio/rain/sbcfm_2.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">MambaFoley</div>
+                <audio controls preload="none"><source src="audio/rain/mambafoley_2.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">T-Foley</div>
+                <audio controls preload="none"><source src="audio/rain/tfoley_2.wav" type="audio/wav"></audio>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Sneeze / Cough ── -->
+    <div class="scene-audio-block">
+        <h4>🤧 Sneeze / Cough</h4>
+        <div class="sample-divider">Sample 1</div>
+        <div class="sample-row">
+            <div class="sample-item">
+                <div class="model-name">Ground Truth</div>
+                <audio controls preload="none"><source src="audio/sneeze_cough/gt_1.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item best">
+                <div class="model-name">SB-CFM (Ours)</div>
+                <audio controls preload="none"><source src="audio/sneeze_cough/sbcfm_1.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">MambaFoley</div>
+                <audio controls preload="none"><source src="audio/sneeze_cough/mambafoley_1.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">T-Foley</div>
+                <audio controls preload="none"><source src="audio/sneeze_cough/tfoley_1.wav" type="audio/wav"></audio>
+            </div>
+        </div>
+        <div class="sample-divider">Sample 2</div>
+        <div class="sample-row">
+            <div class="sample-item">
+                <div class="model-name">Ground Truth</div>
+                <audio controls preload="none"><source src="audio/sneeze_cough/gt_2.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item best">
+                <div class="model-name">SB-CFM (Ours)</div>
+                <audio controls preload="none"><source src="audio/sneeze_cough/sbcfm_2.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">MambaFoley</div>
+                <audio controls preload="none"><source src="audio/sneeze_cough/mambafoley_2.wav" type="audio/wav"></audio>
+            </div>
+            <div class="sample-item">
+                <div class="model-name">T-Foley</div>
+                <audio controls preload="none"><source src="audio/sneeze_cough/tfoley_2.wav" type="audio/wav"></audio>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ════════════ Citation ════════════ -->
+<section>
+    <h2>Citation</h2>
+    <div class="citation-box">
+        <button class="copy-btn" onclick="copyBib()">Copy</button>
+        <pre id="bib-text">@inproceedings{sbcfm2025,
+    title     = {Scene-conditioned Foley Sound Synthesis via
+                 Schr{\"o}dinger Bridge Conditional Flow Matching},
+    author    = {Anonymous},
+    booktitle = {Proc. Interspeech 2025},
+    year      = {2025}
+}</pre>
+    </div>
+</section>
+
+<footer>
+    <p>This page is for demonstration purposes accompanying the paper submission.</p>
+</footer>
+
+<script>
+function copyBib() {
+    const text = document.getElementById('bib-text').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = document.querySelector('.copy-btn');
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 2000);
+    });
+}
+</script>
+
+</body>
+</html>
