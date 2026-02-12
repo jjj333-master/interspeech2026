@@ -476,10 +476,9 @@
     <div class="conference-badge">Interspeech 2026</div>
     <h1>Scene-conditioned Foley Sound Synthesis via Schrödinger Bridge Conditional Flow Matching</h1>
     <p class="authors">
-        <!-- 저자 이름은 accept 후에 추가 -->
-        Anonymous Authors
+        Eojin Kim, Chanjun Chun
     </p>
-    <p class="affiliation">Under Review</p>
+    <p class="affiliation">Department of Computer Engineering, Chosun University, South Korea</p>
     <div class="links">
         <a href="#">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -494,7 +493,7 @@
     <h2>Abstract</h2>
     <div class="abstract-box">
         <p>
-            This paper proposes a scene-conditioned Foley sound synthesis method based on Schrödinger Bridge Conditional Flow Matching (SB-CFM). The proposed approach leverages entropic optimal transport coupling and Schrödinger bridge regularization to learn a robust velocity field for mapping noise to realistic Foley sounds under scene-category conditions. To address the inherently multi-modal nature of Foley synthesis, we adopt SDE-based sampling combined with classifier-free guidance. Experiments on the DCASE 2023 Task 7 dataset show that SB-CFM outperforms existing diffusion-based baselines across all evaluation metrics.
+            This paper proposes a scene-conditioned Foley sound synthesis method based on Schrödinger Bridge Conditional Flow Matching (SB-CFM). The key advantage of SB-CFM lies in its coupling strategy: unlike standard flow matching where noise-data pairs are sampled independently (which can produce crossing transport paths and reduce diversity), SB-CFM first matches pairs via mini-batch optimal transport and then adds a Brownian bridge noise term whose variance peaks at intermediate time steps and vanishes at the boundaries. This provides controlled stochasticity that preserves trajectory diversity even under OT constraints, which is particularly beneficial for Foley synthesis where each scene category spans a wide range of acoustically valid realizations. At inference, we adopt SDE-based sampling combined with classifier-free guidance to further improve mode coverage and enable fine-grained control over the trade-off between conditional fidelity and sample diversity. Experiments on the DCASE 2023 Task 7 dataset demonstrate that SB-CFM outperforms existing diffusion-based baselines across all evaluation metrics.
         </p>
     </div>
 </section>
@@ -1006,10 +1005,10 @@
     <h2>Citation</h2>
     <div class="citation-box">
         <button class="copy-btn" onclick="copyBib()">Copy</button>
-        <pre id="bib-text">@inproceedings{sbcfm2025,
+        <pre id="bib-text">@inproceedings{kim2026sbcfm,
     title     = {Scene-conditioned Foley Sound Synthesis via
                  Schr{\"o}dinger Bridge Conditional Flow Matching},
-    author    = {Anonymous},
+    author    = {Kim, Eojin and Chun, Chanjun},
     booktitle = {Proc. Interspeech 2026},
     year      = {2026}
 }</pre>
